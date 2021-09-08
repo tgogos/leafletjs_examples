@@ -18,3 +18,12 @@ This example adds some more features:
  - grouping things together to `layers`
 
 ![static](./imgs/demo.gif)
+
+
+
+
+## generate_routes.html
+
+This is a small tool that calculates (`latitude`,`longitude`) pairs. As the user keeps clicking on the map, the tool generates all the points that cover that distances (in straight lines) by using a `1-meter` step. With this approach, one can generate cyclic paths on the map and later add `markers` that move at `X` m/sec.
+
+![static](./imgs/generate_route.gif)
