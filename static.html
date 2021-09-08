@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Emulator</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+
+    <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+	
+</head>
+<body>
+
+<style>
+	#mapid {width: 100%; height: 1000px;}
+
+	.emu-pin-box {}
+	.emu-pin-box .pin-bg {width: 28px; height: 28px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -15px 0 0 -15px; border: 1px solid #00a3cc; background: #00ccff;}
+	.emu-pin-box .pin-bg:after {content: ''; width: 24px; height: 24px; margin: 2px 0 0 2px; background: #ffffff; position: absolute; border-radius: 50%;}
+	.emu-pin-box .pin-bg-red {background: #c11515; border-color: #8a1818;}
+	.emu-pin-box .pin-icon {position: absolute; width: 30px; height: 42px ;font-size: 18px; left: 0; top: 8px; text-align: center;}
+	.emu-pin-box .pin-text {position: absolute; width: 30px; height: 42px; font-size: 8px; left: 6px; top: 10px; font-weight: 600;}
+</style>
+
+<div id="mapid"></div>
+<script>
+
+	var mymap = L.map('mapid', {
+		// zoomDelta: 0.25,
+		// zoomSnap: 1
+	}).setView([37.996349, 23.819861], 17);
+
+	L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+		maxZoom: 23,
+		attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+			'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+		id: 'mapbox/streets-v11',
+		tileSize: 512,
+		zoomOffset: -1,
+		// center: [37.996349, 23.819861],
+	}).addTo(mymap);
+
+	
+	// cell
+	// circle
+
+	var cell_icon_5g = L.divIcon({
+		className: 'emu-pin-box',
+		iconSize: L.point(30,42),
+		iconAnchor: L.point(15,42),
+		popupAnchor: L.point(0,-38),
+		tooltipAnchor: L.point(0,0),
+		html: '<div class="pin-bg pin-bg-red"></div>\
+		       <div class="pin-icon icon ion-md-cellular"></div>\
+		       <div class="pin-text">5G</div>',
+	});
+	L.marker([37.996192, 23.81851], {icon: cell_icon_5g}).addTo(mymap)
+	    .bindTooltip("10.2.0.1")
+		.bindPopup("<b>Hello world!</b><br />I am a popup.");
+
+	L.circle([37.996192, 23.81851], 100, {
+		color: 'none',
+		fillColor: '#f03',
+		fillOpacity: 0.1
+	}).addTo(mymap);
+
+
+
+	var car_icon = L.divIcon({
+		className: 'emu-pin-box',
+		iconSize: L.point(30,42),
+		iconAnchor: L.point(15,42),
+		html: '<div class="pin-bg"></div>\
+		       <div class="pin-icon ion-md-car"></div>'
+	});
+	L.marker([37.996149, 23.819281], {icon: car_icon}).addTo(mymap);
+
+
+
+
+	var walk_icon = L.divIcon({
+		className: 'emu-pin-box',
+		iconSize: L.point(30,42),
+		iconAnchor: L.point(15,42),
+		html: '<div class="pin-bg pin-bg-walk"></div>\
+		       <div class="pin-icon ion-md-walk"></div>'
+	});
+	L.marker([37.997268, 23.818495], {icon: walk_icon}).addTo(mymap);
+
+
+	
+
+
+
+	// create a red polyline from an array of LatLng points
+	var latlngs = [
+	    [37.999268, 23.81763],
+	    [37.999198, 23.8178],
+	    [37.999147, 23.817903],
+	    [37.999113, 23.817974],
+	    [37.999066, 23.818078],
+	    [37.998828, 23.818626],
+	    [37.998486, 23.819499],
+	    [37.998413, 23.819749],
+	    [37.998277, 23.819706],
+	    [37.998128, 23.819621],
+	    [37.997727, 23.819097],
+	    [37.997268, 23.818495]
+	];
+
+	var polyline = L.polyline(latlngs, {
+		color: '#00a3cc',
+		opacity: 0.4
+	}).addTo(mymap);
+
+	// zoom the map to the polyline
+	// mymap.fitBounds(polyline.getBounds());
+
+
+	// top right zoom-level indicator
+	var ZoomViewer = L.Control.extend({
+		onAdd: function(){
+			var gauge = L.DomUtil.create('div');
+			gauge.style.width = '100px';
+			gauge.style.background = 'rgba(255,255,255,0.5)';
+			gauge.style.textAlign = 'center';
+			mymap.on('zoomstart zoom zoomend', function(ev){
+				gauge.innerHTML = 'Zoom level: ' + mymap.getZoom();
+			})
+			return gauge;
+		}
+	});
+
+	(new ZoomViewer).addTo(mymap);
+
+
+	// L.marker([37.998023, 23.819196]).addTo(mymap)
+	// 	.bindPopup("<b>Hello world!</b><br />I am a popup.").openPopup();
+
+	// L.circle([37.998023, 23.819196], 200, {
+	// 	color: 'none',
+	// 	fillColor: '#f03',
+	// 	fillOpacity: 0.1
+	// }).addTo(mymap).bindPopup("I am a circle.");
+
+	// L.polygon([
+	// 	[51.509, -0.08],
+	// 	[51.503, -0.06],
+	// 	[51.51, -0.047]
+	// ]).addTo(mymap).bindPopup("I am a polygon.");
+
+
+	var popup = L.popup();
+
+	function onMapClick(e) {
+		popup
+			.setLatLng(e.latlng)
+			.setContent("You clicked the map at " + e.latlng.toString())
+			.openOn(mymap);
+	}
+
+	mymap.on('click', onMapClick);
+
+</script>
+
+
+
+</body>
+</html>

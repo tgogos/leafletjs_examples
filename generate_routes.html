@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Route-points Generator</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script>
+
+    <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+	
+</head>
+<body>
+
+<style>
+	#mapid {width: 100%; height: 700px;}
+
+	.emu-pin-box {}
+	.emu-pin-box .pin-bg {width: 28px; height: 28px; border-radius: 50% 50% 50% 0; position: absolute; transform: rotate(-45deg); left: 50%; top: 50%; margin: -15px 0 0 -15px; border: 1px solid #00a3cc; background: #00ccff;}
+	.emu-pin-box .pin-bg:after {content: ''; width: 24px; height: 24px; margin: 2px 0 0 2px; background: #ffffff; position: absolute; border-radius: 50%;}
+	.emu-pin-box .pin-bg-red {background: #c11515; border-color: #8a1818;}
+	.emu-pin-box .pin-icon {position: absolute; width: 30px; height: 42px ;font-size: 18px; left: 0; top: 8px; text-align: center;}
+	.emu-pin-box .pin-text {position: absolute; width: 30px; height: 42px; font-size: 8px; left: 6px; top: 10px; font-weight: 600;}
+
+	#console {width: 100%;}
+</style>
+
+<div id="mapid"></div>
+<div>
+	<textarea name="" id="console" cols="30" rows="50"></textarea>
+</div>
+<script>
+
+var mymap = L.map('mapid', {
+	// zoomDelta: 0.25,
+	// zoomSnap: 1
+}).setView([37.996349, 23.819861], 17);
+
+L.tileLayer('https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+	maxZoom: 23,
+	attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+		'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+	id: 'mapbox/streets-v11',
+	tileSize: 512,
+	zoomOffset: -1,
+	// center: [37.996349, 23.819861],
+}).addTo(mymap);
+
+
+
+
+
+
+// top right zoom-level indicator
+var ZoomViewer = L.Control.extend({
+	onAdd: function(){
+		var gauge = L.DomUtil.create('div');
+		gauge.style.width = '100px';
+		gauge.style.background = 'rgba(255,255,255,0.5)';
+		gauge.style.textAlign = 'center';
+		mymap.on('zoomstart zoom zoomend', function(ev){
+			gauge.innerHTML = 'Zoom level: ' + mymap.getZoom();
+		})
+		return gauge;
+	}
+});
+
+(new ZoomViewer).addTo(mymap);
+
+
+
+
+
+
+// How to generate coordinates in between two known points
+// https://stackoverflow.com/questions/22063201/how-to-generate-coordinates-in-between-two-known-points
+function to_rad(num) {
+	return num * Math.PI / 180;
+}
+function to_deg(num) {
+	return num * 180 / Math.PI;
+}
+var R = 6371.0;
+function waypoint(φ1, λ1, θ, d) {
+	φ2 = Math.asin( Math.sin(φ1) * Math.cos(d/R) + Math.cos(φ1) * Math.sin(d/R) * Math.cos(θ) );
+	λ2 = λ1 + Math.atan2( Math.sin(θ) * Math.sin(d/R) * Math.cos(φ1), Math.cos(d/R) - Math.sin(φ1) * Math.sin(φ2) );
+	λ2 = (λ2 + 3 * Math.PI) % (2 * Math.PI) - Math.PI; // normalise to -180..+180°
+	return {'φ2': φ2, 'λ2': λ2};
+}
+
+function generate_coords_between_points(φ1, λ1, φ2, λ2){
+	var φ1 = to_rad(φ1);
+	var λ1 = to_rad(λ1);
+	var φ2 = to_rad(φ2);
+	var λ2 = to_rad(λ2);
+
+	var text_area = document.querySelector("#console");
+
+	var d = R * Math.acos( Math.sin(φ1) * Math.sin(φ2) + Math.cos(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1) );
+	var θ = Math.atan2( Math.sin(λ2 - λ1) * Math.cos(φ2), Math.cos(φ1) * Math.sin(φ2) - Math.sin(φ1) * Math.cos(φ2) * Math.cos(λ2 - λ1) );
+
+	for (step=0.001 ; step<d ; step=step+0.001) {  // 0.001km = 1m
+		point = waypoint(φ1, λ1, θ, step);
+		lat  = to_deg(point.φ2);
+		long = to_deg(point.λ2);
+
+		L.circle([lat,long], 0.5, {
+			color: 'none',
+			fillColor: '#f03',
+			fillOpacity: 0.4
+		}).addTo(mymap);
+
+		text_area.value += lat + "," + long + "\n";
+	}
+}
+
+
+
+var pointA = null;
+var pointB = null;
+function onMapClick(e) {
+	if (pointA == null) {
+		pointA = e.latlng;
+		L.circle(e.latlng, 0.5, {
+			color: 'none',
+			fillColor: '#f03',
+			fillOpacity: 0.4
+		}).addTo(mymap);
+		return;
+	}
+	if (pointB == null) {
+		pointB = e.latlng;
+		console.log(pointA);
+		console.log(pointB);
+		generate_coords_between_points(pointA.lat, pointA.lng, pointB.lat, pointB.lng);
+		pointA = pointB;
+		pointB = null;
+	}
+}
+
+mymap.on('click', onMapClick);
+
+</script>
+
+
+
+</body>
+</html>
