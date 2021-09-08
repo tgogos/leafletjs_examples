@@ -1,5 +1,7 @@
 # leafletjs_examples
-basic examples utilizing leafletjs
+basic examples utilizing leafletjs.
+
+> 💡 This repo was inspired by the **ETSI MEC Sandbox** which can be found at [try-mec.etsi.org](https://try-mec.etsi.org/).
 
 ## static.html
 
