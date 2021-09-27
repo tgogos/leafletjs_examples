@@ -91,6 +91,9 @@ function waypoint(φ1, λ1, θ, d) {
 	return {'φ2': φ2, 'λ2': λ2};
 }
 
+
+var points = [];
+
 function generate_coords_between_points(φ1, λ1, φ2, λ2){
 	var φ1 = to_rad(φ1);
 	var λ1 = to_rad(λ1);
@@ -117,6 +120,7 @@ function generate_coords_between_points(φ1, λ1, φ2, λ2){
 		long = long.toFixed(6); // keep only 6 decimal points
 
 		text_area.value += lat + "," + long + "\n";
+		points.push({"latitude": lat, "longitude": long});
 	}
 }
 
@@ -136,8 +140,8 @@ function onMapClick(e) {
 	}
 	if (pointB == null) {
 		pointB = e.latlng;
-		console.log(pointA);
-		console.log(pointB);
+		// console.log(pointA);
+		// console.log(pointB);
 		generate_coords_between_points(pointA.lat, pointA.lng, pointB.lat, pointB.lng);
 		pointA = pointB;
 		pointB = null;
