@@ -113,6 +113,9 @@ function generate_coords_between_points(φ1, λ1, φ2, λ2){
 			fillOpacity: 0.4
 		}).addTo(mymap);
 
+		lat  = lat.toFixed(6); // keep only 6 decimal points
+		long = long.toFixed(6); // keep only 6 decimal points
+
 		text_area.value += lat + "," + long + "\n";
 	}
 }
