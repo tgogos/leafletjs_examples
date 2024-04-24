@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html>
+<head>
+	
+	<title>Polygon Generator</title>
+
+	<meta charset="utf-8" />
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	
+    <!-- <link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css" integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==" crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js" integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==" crossorigin=""></script> -->
+
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+
+
+    <link href="https://unpkg.com/ionicons@4.5.10-0/dist/css/ionicons.min.css" rel="stylesheet">
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js" integrity="sha256-/JqT3SQfawRcv/BIHPThkBvs0OEvtFFmqPF/lYI/Cxo=" crossorigin="anonymous"></script>
+	
+</head>
+<body>
+
+
+
+
+<style>
+	#mapid {width: 100%; height: 700px;}
+	#console {width: 100%;}
+</style>
+
+
+
+
+
+<div>
+<h5>Start / End points</h5>
+</div>
+<!-- --------------------------------- -->
+<div>
+<p>🔵 Start: Latitude <code id="add_path_start_lat"></code> , Longitude: <code id="add_path_start_lon"></code></p>
+</div>
+<div>
+<p>🔴 End:   Latitude <code id="add_path_end_lat"></code> ,   Longitude: <code id="add_path_end_lon"></code></p>
+</div>
+<div style="text-align: right;">
+<button type="button" class="btn btn-light mb-2" id="add_path_reset">Reset</button>
+</div>
+<!-- --------------------------------- -->
+
+<div id="add_path_mapid"></div>
+
+<div>
+	<textarea name="" id="console" cols="30" rows="50"></textarea>
+</div>
+
+
+
+
+<script>
+
+// var add_path_UE_position_lg = L.layerGroup(); // map layer group for UEs
+// var add_path_cell_lg        = L.layerGroup(); // map layer group
+// var add_path_coverage_lg    = L.layerGroup(); // map layer group
+// var add_path_all_paths_lg   = L.layerGroup(); // map layer group for all paths
+var add_path_new_path_lg    = L.layerGroup(); // map layer group for path
+var add_path_points_lg      = L.layerGroup(); // map layer group for start/end points
+var add_path_start_dot   = null;           // small circle depicting the starting point of the path (to be added)
+var add_path_end_dot     = null;           // small circle depicting the   ending point of the path (to be added)
+var add_path_polyline    = null;
+var pointA = null;
+var pointB = null;
+
+var add_path_tmp_obj = {
+        description: "",
+        start_point: {
+            latitude  : null,
+            longitude : null
+        },
+        end_point: {
+            latitude  : null,
+            longitude : null
+        },
+        color: "#3399ff",
+        points: [],
+};
+
+var text_area = document.querySelector("#console");
+
+
+
+function ui_initialize_add_path_map() {
+
+    // set map height
+    $('#add_path_mapid').css({ "height": 600 } );
+
+    var mbAttr = 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
+                'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+        mbUrl = 'https://api.mapbox.com/styles/v1/{id}/tiles/{z}/{x}/{y}?access_token=pk.eyJ1IjoiZXhhbXBsZXMiLCJhIjoiY2p0MG01MXRqMW45cjQzb2R6b2ptc3J4MSJ9.zA2W0IkI0c6KaAhJfk9bWg';
+
+    var osAttr = '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+        osUrl  = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+
+
+
+    var grayscale   = L.tileLayer(mbUrl, {id: 'mapbox/light-v9',    tileSize: 512, zoomOffset: -1, attribution: mbAttr, maxZoom: 23}),
+        streets     = L.tileLayer(mbUrl, {id: 'mapbox/streets-v11', tileSize: 512, zoomOffset: -1, attribution: mbAttr, maxZoom: 23}),
+        osm         = L.tileLayer(osUrl, {                          tileSize: 512, zoomOffset: -1, attribution: mbAttr, maxZoom: 23});
+
+
+
+
+    // =============================================
+    //           map initialization
+    // =============================================
+    add_path_map = L.map('add_path_mapid', {
+        // layers: [grayscale, add_path_UE_position_lg, add_path_cell_lg, add_path_coverage_lg, add_path_all_paths_lg, add_path_points_lg, add_path_new_path_lg ]
+        layers: [grayscale, add_path_points_lg, add_path_new_path_lg ]
+    }).setView([37.974644, 23.735697], 18);  // Syntagma square
+    //.setView([48.499998, 23.383331], 5 );  // Geographical midpoint of Europe
+
+
+    var baseLayers = {
+            "Grayscale": grayscale,
+            "Streets": streets,
+            'OpenStreetMap': osm
+        };
+
+    var overlays = {
+        // "UEs"     : add_path_UE_position_lg,
+        // "Cells"   : add_path_cell_lg,
+        // "Coverage": add_path_coverage_lg,
+        // "Paths"   : add_path_all_paths_lg,
+        "New path": add_path_new_path_lg,
+        "points"  : add_path_points_lg
+    };
+
+    L.control.layers(baseLayers, overlays).addTo(add_path_map);
+
+
+
+
+    // =============================================
+    //     add a top right zoom-level indicator
+    // =============================================
+    var ZoomViewer = L.Control.extend({
+        onAdd: function(){
+            var gauge = L.DomUtil.create('div');
+            gauge.style.width = '100px';
+            gauge.style.background = 'rgba(255,255,255,0.5)';
+            gauge.style.textAlign = 'center';
+            add_path_map.on('zoomstart zoom zoomend', function(ev){
+                gauge.innerHTML = 'Zoom level: ' + add_path_map.getZoom();
+            })
+            return gauge;
+        }
+    });
+
+    (new ZoomViewer).addTo(add_path_map);
+
+
+
+
+    function onAddPathMapClick(e) {
+        if (pointA == null) {
+            pointA = e.latlng;
+            
+            
+            add_path_tmp_obj.start_point.latitude  = parseFloat(e.latlng.lat.toFixed(6));
+            add_path_tmp_obj.start_point.longitude = parseFloat(e.latlng.lng.toFixed(6));
+            $('#add_path_start_lat').html( add_path_tmp_obj.start_point.latitude  );
+            $('#add_path_start_lon').html( add_path_tmp_obj.start_point.longitude );
+
+            // add a solid-color small circle (dot) at the start lat,lon
+            add_path_start_dot = L.circle([add_path_tmp_obj.start_point.latitude,add_path_tmp_obj.start_point.longitude], 1, {
+                color: 'none',
+                fillColor: '#3590e2',
+                fillOpacity: 1.0
+            }).addTo(add_path_points_lg ).addTo( add_path_map );
+
+            lat  = e.latlng.lat.toFixed(6);  // keep only 6 decimal points
+            long = e.latlng.lng.toFixed(6);  // keep only 6 decimal points
+            text_area.value += lat + "," + long + "\n";
+            
+            add_path_tmp_obj.points.push({"latitude": lat, "longitude": long});
+
+            return;
+        }
+        if (pointB == null) {
+            pointB = e.latlng;
+
+            add_path_tmp_obj.end_point.latitude  = parseFloat(e.latlng.lat.toFixed(6));
+            add_path_tmp_obj.end_point.longitude = parseFloat(e.latlng.lng.toFixed(6));
+            $('#add_path_end_lat').html( add_path_tmp_obj.end_point.latitude  );
+            $('#add_path_end_lon').html( add_path_tmp_obj.end_point.longitude );
+            
+            // add a solid-color small circle (dot) at the end lat,lon
+            if (add_path_end_dot != null) { add_path_end_dot.remove(); }
+            add_path_end_dot = L.circle([add_path_tmp_obj.end_point.latitude,add_path_tmp_obj.end_point.longitude], 1, {
+                color: 'none',
+                fillColor: '#c7362c',
+                fillOpacity: 1.0
+            }).addTo(add_path_points_lg).addTo( add_path_map );
+
+
+            lat  = e.latlng.lat.toFixed(6);  // keep only 6 decimal points
+            long = e.latlng.lng.toFixed(6);  // keep only 6 decimal points
+            text_area.value += lat + "," + long + "\n";
+            
+            add_path_tmp_obj.points.push({"latitude": lat, "longitude": long});
+
+
+            // draw lines
+            if ( add_path_polyline != null) { add_path_polyline.remove(); }
+
+                var latlng   = helper_fix_points_format( add_path_tmp_obj.points );
+                
+                add_path_polyline = L.polyline(latlng, {
+                    color: add_path_tmp_obj.color,
+                    opacity: 0.2
+                }).addTo( add_path_new_path_lg ).addTo( add_path_map );
+
+           
+
+            pointA = pointB;
+            pointB = null;
+        }
+    }
+
+    add_path_map.on('click', onAddPathMapClick);
+
+}
+
+
+function ui_add_path_modal_reset_form() {
+
+    // form
+    $('#add_path_start_lat').html("");
+    $('#add_path_start_lon').html("");
+    $('#add_path_end_lat').html("");
+    $('#add_path_end_lon').html("");
+    
+
+    // leaflet js map
+    if (add_path_start_dot) { add_path_start_dot.remove();      }
+    if (add_path_end_dot  ) { add_path_end_dot.remove();        }
+    if (add_path_polyline ) { add_path_polyline.remove();       }
+    if (add_path_new_path_lg  ) { add_path_new_path_lg.clearLayers();   }
+    if (add_path_points_lg) { add_path_points_lg.clearLayers(); }
+
+    // data
+    add_path_tmp_obj = {
+            description: "",
+            start_point: {
+                latitude  : null,
+                longitude : null
+            },
+            end_point: {
+                latitude  : null,
+                longitude : null
+            },
+            color: "#3399ff",
+            points: [],
+    };
+    pointA = null;
+    pointB = null;
+
+    text_area.value = "";
+}
+
+
+
+$('#add_path_reset').on('click', function(){
+    ui_add_path_modal_reset_form();
+});
+
+
+
+// Helper function
+// Takes the data fetched from the API
+// and returns them with a format appropriate for
+// leaflet.js
+// 
+function helper_fix_points_format( datapoints ) {
+
+    // from (array of objects): [{latitude: 37.996095, longitude: 23.818562},{...}]
+    // to   (array of arrays) : [[37.996095,23.818562],[...]
+
+    var fixed = new Array(datapoints.length);
+    
+    for (i=0 ; i<datapoints.length ; i++) {
+        fixed[i] = [datapoints[i].latitude , datapoints[i].longitude];
+    }
+    return fixed;
+}
+
+
+
+ui_initialize_add_path_map();
+
+</script>
+
+
+
+</body>
+</html>
