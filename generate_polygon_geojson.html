@@ -25,7 +25,6 @@
 
 
 <style>
-	#mapid {width: 100%; height: 700px;}
 	#console {width: 100%;}
 </style>
 
@@ -44,7 +43,8 @@
 <p>🔴 End:   Latitude <code id="add_path_end_lat"></code> ,   Longitude: <code id="add_path_end_lon"></code></p>
 </div>
 <div style="text-align: right;">
-<button type="button" class="btn btn-light mb-2" id="add_path_reset">Reset</button>
+<button type="button" id="add_path_clear">Clear</button>
+<button type="button" id="add_path_close_poly">Close polygon</button>
 </div>
 <!-- --------------------------------- -->
 
@@ -92,7 +92,7 @@ var text_area = document.querySelector("#console");
 function ui_initialize_add_path_map() {
 
     // set map height
-    $('#add_path_mapid').css({ "height": 600 } );
+    $('#add_path_mapid').css({ "height": 400 } );
 
     var mbAttr = 'Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors, ' +
                 'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
@@ -270,8 +270,36 @@ function ui_add_path_modal_reset_form() {
 
 
 
-$('#add_path_reset').on('click', function(){
+$('#add_path_clear').on('click', function(){
     ui_add_path_modal_reset_form();
+});
+
+
+$('#add_path_close_poly').on('click', function(){
+
+    add_path_tmp_obj.points.push(add_path_tmp_obj.points[0]); // close the polygon by pushing the very 1st point
+
+    var poly_geojson = {
+        "type": "Feature",
+        "properties": {"prop_name": "prop_value_B"},
+        "geometry": {
+            "type": "Polygon",
+            "coordinates": [helper_fix_points_format_for_geojson( add_path_tmp_obj.points )]
+        }
+    };
+
+    L.geoJSON(poly_geojson, {
+        style: function(feature) {
+            switch (feature.properties.party) {
+                case 'prop_value_A': return {color: "#ff0000"};
+                case 'prop_value_B': return {color: "#0000ff"};
+            }
+        }
+    }).addTo(add_path_new_path_lg);
+
+    text_area.value = JSON.stringify( poly_geojson, null, 2 );
+
+    // ui_add_path_modal_reset_form();
 });
 
 
@@ -283,13 +311,28 @@ $('#add_path_reset').on('click', function(){
 // 
 function helper_fix_points_format( datapoints ) {
 
-    // from (array of objects): [{latitude: 37.996095, longitude: 23.818562},{...}]
-    // to   (array of arrays) : [[37.996095,23.818562],[...]
+    // from (array of objects): [{latitude: '37.996095', longitude: '23.818562'},{...}]
+    // to   (array of arrays) : [['37.996095','23.818562'],[...]
 
     var fixed = new Array(datapoints.length);
     
     for (i=0 ; i<datapoints.length ; i++) {
         fixed[i] = [datapoints[i].latitude , datapoints[i].longitude];
+    }
+    return fixed;
+}
+
+
+function helper_fix_points_format_for_geojson( datapoints ) {
+
+    // from (array of objects): [{latitude: '37.996095', longitude: '23.818562'},{...}]
+    // to   (array of arrays) : [[37.996095,23.818562],[...]
+    // NOTICE: GeoJSON needs lng-lat NOT lat-lng
+
+    var fixed = new Array(datapoints.length);
+    
+    for (i=0 ; i<datapoints.length ; i++) {
+        fixed[i] = [ parseFloat( datapoints[i].longitude ), parseFloat( datapoints[i].latitude ) ];
     }
     return fixed;
 }
